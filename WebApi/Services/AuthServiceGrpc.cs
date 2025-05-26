@@ -6,7 +6,7 @@ using WebApi.Repositories;
 
 namespace WebApi.Services;
 
-public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context) : AuthHandler.AuthHandlerBase
+public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context) : AccountHandler.AccountHandlerBase
 {
     private readonly AuthRepository _authRepository = authRepository;
     private readonly ILogger<AuthService> _logger = logger;
@@ -15,17 +15,13 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
 
     public override async Task<CreateReply> CreateUser(CreateRequest request, ServerCallContext context)
     {
-        if (string.IsNullOrWhiteSpace(request.FirstName) ||
-            string.IsNullOrWhiteSpace(request.LastName) ||
-            string.IsNullOrWhiteSpace(request.Email) ||
+            if(string.IsNullOrWhiteSpace(request.Email) ||
             string.IsNullOrWhiteSpace(request.Password)
             )
             return new CreateReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
 
         var newUser = new UserEntity
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
             UserName = request.Email,
             Email = request.Email
         };
@@ -58,8 +54,6 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
     public override async Task<UpdateReply> UpdateUser(UpdateRequest request, ServerCallContext context)
     {
         if (string.IsNullOrWhiteSpace(request.Id) ||
-           string.IsNullOrWhiteSpace(request.FirstName) ||
-           string.IsNullOrWhiteSpace(request.LastName) ||
            string.IsNullOrWhiteSpace(request.Email)
            )
             return new UpdateReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
@@ -67,8 +61,6 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         var newUser = new UserEntity
         {
             Id = request.Id,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
             UserName = request.Email,
             Email = request.Email
         };
@@ -114,8 +106,6 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         var newUser = new UserEntity
         {
             Id = request.Id,
-            FirstName = userResult.Data.FirstName,
-            LastName = userResult.Data.LastName,
             UserName = userResult.Data.Email,
             Email = userResult.Data.Email
         };
@@ -158,8 +148,6 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         var user = new UserEntity
         {
             Id = request.Id,
-            FirstName = userResult.Data.FirstName,
-            LastName = userResult.Data.LastName,
             UserName = userResult.Data.Email,
             Email = userResult.Data.Email
         };

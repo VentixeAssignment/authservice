@@ -24,7 +24,7 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<Protobuf Include="Protos\AuthHandler.proto" GrpcServices="Server" />
+		<Protobuf Include="Protos\AccountHandler.proto" GrpcServices="Server" />
 	</ItemGroup>
 
 </Project>

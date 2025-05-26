@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option csharp_namespace = "WebApi.Protos";
 
-service AuthHandler {
+service AccountHandler {
 	rpc CreateUser(CreateRequest) returns(CreateReply);
 	rpc UpdateUser(UpdateRequest) returns(UpdateReply);
 	rpc UpdatePassword(PasswordRequest) returns(PasswordReply);
@@ -10,10 +10,8 @@ service AuthHandler {
 }
 
 message CreateRequest {
-	string FirstName = 1;
-	string LastName = 2;
-	string Email = 4;
-	string Password = 5;
+	string Email = 1;
+	string Password = 2;
 }
 
 message CreateReply {
@@ -24,9 +22,7 @@ message CreateReply {
 
 message UpdateRequest {
 	string Id = 1;
-	string FirstName = 2;
-	string LastName = 3;
-	string Email = 4;
+	string Email = 2;
 }
 
 message UpdateReply {
