@@ -1,6 +1,10 @@
-﻿namespace WebApi.Services;
+﻿using WebApi.Entities;
+using WebApi.Models;
 
-public interface IAuthService
+namespace WebApi.Services;
+
+public interface IAuthService 
 {
-
+    Task<AuthResult> SignIn(string username, string password);
+    AuthResult SignOut(UserEntity user);
 }
