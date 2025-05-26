@@ -5,6 +5,6 @@ namespace WebApi.Services;
 
 public interface IAuthService 
 {
-    Task<AuthResult> SignIn(string username, string password);
-    AuthResult SignOut(UserEntity user);
+    Task<AuthResult> SignInAsync(string username, string password);
+    Task<AuthResult> SignOutAsync();
 }

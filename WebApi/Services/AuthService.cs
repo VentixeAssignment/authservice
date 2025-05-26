@@ -10,7 +10,7 @@ public class AuthService(AuthRepository authRepository) : IAuthService
 {
     private readonly AuthRepository _authRepository = authRepository;
 
-    public async Task<AuthResult> SignIn(string userName, string password)
+    public async Task<AuthResult> SignInAsync(string userName, string password)
     {
         if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
             return new AuthResult { Success = false, ErrorMessage = "User name and password cannot be empty." };
@@ -29,11 +29,9 @@ public class AuthService(AuthRepository authRepository) : IAuthService
         }
     }
 
-    public AuthResult SignOut(UserEntity user)
+    public async Task<AuthResult> SignOutAsync()
     {
-        var result = _authRepository.SignOut();
-        if (result.IsCompleted)
-            return new AuthResult() { Success = true };
-        return new AuthResult { Success = false, ErrorMessage = result.Result.ErrorMessage };
+        var result = await _authRepository.SignOutAsync();
+        return new AuthResult { Success = result.Success, Message = result.Message ?? "", ErrorMessage = result.ErrorMessage ?? "" };
     }    
 }

@@ -47,21 +47,142 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
 
             return new CreateReply { Success = true, StatusCode = 201, Message = "User was successfully created." };
         }
-        catch (Exception ex)
+        catch (RpcException ex)
         {
             await transaction.RollbackAsync();
-            _logger.LogWarning($"Something unexpected went wrong trying to create user with email {request.Email}.\n{ex}\n{ex.Message}");
+            _logger.LogWarning($"Something unexpected happened trying to create user with email {request.Email}.\n{ex}\n{ex.Message}");
             return new CreateReply { Success = false, StatusCode = 500, Message = $"Unable to create user with email {request.Email}\nError: {ex.Message}" };
         }
     }
 
-    public override Task<UpdateReply> UpdateUser(UpdateRequest request, ServerCallContext context)
+    public override async Task<UpdateReply> UpdateUser(UpdateRequest request, ServerCallContext context)
     {
-        return base.UpdateUser(request, context);
+        if (string.IsNullOrWhiteSpace(request.Id) ||
+           string.IsNullOrWhiteSpace(request.FirstName) ||
+           string.IsNullOrWhiteSpace(request.LastName) ||
+           string.IsNullOrWhiteSpace(request.Email)
+           )
+            return new UpdateReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
+
+        var newUser = new UserEntity
+        {
+            Id = request.Id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            UserName = request.Email,
+            Email = request.Email
+        };
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var result = await _authRepository.UpdateUserAsync(newUser);
+
+            if (!result.Success)
+            {
+                await transaction.RollbackAsync();
+                return new UpdateReply { Success = false, StatusCode = 500, Message = $"Unable to update user.\nError: {result.ErrorMessage}" };
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return new UpdateReply { Success = true, StatusCode = 200, Message = "User was successfully updated." };
+        }
+        catch (RpcException ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogWarning($"Something unexpected happened trying to update user.\n{ex}\n{ex.Message}");
+            return new UpdateReply { Success = false, StatusCode = 500, Message = $"Unable to update user.\nError: {ex.Message}" };
+        }
     }
 
-    public override Task<DeleteReply> DeleteUser(DeleteRequest request, ServerCallContext context)
+    public override async Task<PasswordReply> UpdatePassword(PasswordRequest request, ServerCallContext context)
     {
-        return base.DeleteUser(request, context);
+        if (string.IsNullOrWhiteSpace(request.Id) ||
+            string.IsNullOrWhiteSpace(request.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(request.NewPassword)
+           )
+            return new PasswordReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
+
+        var userResult = await _authRepository.GetUserAsync(request.Id);
+
+        if (!userResult.Success || userResult.Data == null)
+            return new PasswordReply { Success = false, StatusCode = 400, Message = $"No user with id {request.Id} was found." };
+
+        var newUser = new UserEntity
+        {
+            Id = request.Id,
+            FirstName = userResult.Data.FirstName,
+            LastName = userResult.Data.LastName,
+            UserName = userResult.Data.Email,
+            Email = userResult.Data.Email
+        };
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var result = await _authRepository.UpdatePasswordAsync(newUser, request.CurrentPassword, request.NewPassword);
+
+            if (!result.Success)
+            {
+                await transaction.RollbackAsync();
+                return new PasswordReply { Success = false, StatusCode = 500, Message = $"Unable to update password.\nError: {result.ErrorMessage}" };
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return new PasswordReply { Success = true, StatusCode = 200, Message = "User was successfully updated." };
+        }
+        catch (RpcException ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogWarning($"Something unexpected happened trying to update password.\n{ex}\n{ex.Message}");
+            return new PasswordReply { Success = false, StatusCode = 500, Message = $"Unable to update password.\nError: {ex.Message}" };
+        }
+    }
+
+    public override async Task<DeleteReply> DeleteUser(DeleteRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.Id))
+            return new DeleteReply { Success = false, StatusCode = 400, Message = "Id cannot be null." };
+
+        var userResult = await _authRepository.GetUserAsync(request.Id);
+
+        if (!userResult.Success || userResult.Data == null)
+            return new DeleteReply { Success = false, StatusCode = 400, Message = $"No user with id {request.Id} was found." };
+
+        var user = new UserEntity
+        {
+            Id = request.Id,
+            FirstName = userResult.Data.FirstName,
+            LastName = userResult.Data.LastName,
+            UserName = userResult.Data.Email,
+            Email = userResult.Data.Email
+        };
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var result = await _authRepository.DeleteUserAsync(user);
+
+            if (!result.Success)
+                return new DeleteReply { Success = false, StatusCode = 500, Message = result.ErrorMessage };
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return new DeleteReply { Success = true, StatusCode = 200, Message = "Successfully deleted user." };
+        }
+        catch (RpcException ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogWarning($"Something unexpected happened trying to delete user.\n{ex}\n{ex.StatusCode}\n{ex.Message}");
+            return new DeleteReply { Success = false, StatusCode = (int)ex.StatusCode, Message = $"Unable to delete user.\nError: {ex}\n{ex.StatusCode}\n{ex.Message}" };
+        }
     }
 }
