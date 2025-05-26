@@ -6,7 +6,7 @@ using WebApi.Repositories;
 
 namespace WebApi.Services;
 
-public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context) : AccountHandler.AccountHandlerBase
+public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context) : AuthHandler.AuthHandlerBase
 {
     private readonly AuthRepository _authRepository = authRepository;
     private readonly ILogger<AuthService> _logger = logger;
@@ -43,7 +43,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
 
             return new CreateReply { Success = true, StatusCode = 201, Message = "User was successfully created." };
         }
-        catch (RpcException ex)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
             _logger.LogWarning($"Something unexpected happened trying to create user with email {request.Email}.\n{ex}\n{ex.Message}");
@@ -82,7 +82,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
 
             return new UpdateReply { Success = true, StatusCode = 200, Message = "User was successfully updated." };
         }
-        catch (RpcException ex)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
             _logger.LogWarning($"Something unexpected happened trying to update user.\n{ex}\n{ex.Message}");
@@ -127,7 +127,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
 
             return new PasswordReply { Success = true, StatusCode = 200, Message = "User was successfully updated." };
         }
-        catch (RpcException ex)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
             _logger.LogWarning($"Something unexpected happened trying to update password.\n{ex}\n{ex.Message}");
@@ -166,11 +166,11 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
 
             return new DeleteReply { Success = true, StatusCode = 200, Message = "Successfully deleted user." };
         }
-        catch (RpcException ex)
+        catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            _logger.LogWarning($"Something unexpected happened trying to delete user.\n{ex}\n{ex.StatusCode}\n{ex.Message}");
-            return new DeleteReply { Success = false, StatusCode = (int)ex.StatusCode, Message = $"Unable to delete user.\nError: {ex}\n{ex.StatusCode}\n{ex.Message}" };
+            _logger.LogWarning($"Something unexpected happened trying to delete user.\n{ex}\n{ex.Message}");
+            return new DeleteReply { Success = false, StatusCode = 500, Message = $"Unable to delete user.\nError: {ex}\n{ex.Message}" };
         }
     }
 }
