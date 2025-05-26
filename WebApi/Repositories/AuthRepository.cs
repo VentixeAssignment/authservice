@@ -1,34 +1,18 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
+﻿using Microsoft.AspNetCore.Identity;
 using WebApi.Data;
 using WebApi.Entities;
 using WebApi.Models;
 
 namespace WebApi.Repositories;
 
-public class AuthRepository
+public class AuthRepository(DataContext context, SignInManager<UserEntity> signInManager, UserManager<UserEntity> userManager, ILogger<AuthRepository> logger)
 {
-    protected readonly DataContext _context;
-    private readonly DbSet<UserEntity> _table;
-    private readonly SignInManager<UserEntity> _signInManager;
-    private readonly UserManager<UserEntity> _userManager;
-    private readonly ILogger<AuthRepository> _logger;
-    private IDbContextTransaction _transaction;
+    protected readonly DataContext _context = context;
+    private readonly SignInManager<UserEntity> _signInManager = signInManager;
+    private readonly UserManager<UserEntity> _userManager = userManager;
+    private readonly ILogger<AuthRepository> _logger = logger;
 
-    public AuthRepository(DataContext context, DbSet<UserEntity> table, SignInManager<UserEntity> signInManager, UserManager<UserEntity> userManager, ILogger<AuthRepository> logger, IDbContextTransaction transaction)
-    {
-        _context = context;
-        _table = context.Set<UserEntity>();
-        _signInManager = signInManager;
-        _userManager = userManager;
-        _logger = logger;
-        _transaction = transaction;
-    }
 
-    #region CRUD
     public async Task<AuthResult> SignInAsync(string userName, string password)
     {
         if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
@@ -82,84 +66,4 @@ public class AuthRepository
             return new AuthResult { Success = false, ErrorMessage = $"Failed to create user. {ex.Message}" };
         }
     }
-#endregion
-
-
-    #region Transactions
-
-    public async Task<AuthResult> BeginTransactionAsync()
-    {
-        if (_transaction != null)
-            return new AuthResult { Success = false, ErrorMessage = "Failed to begin transaction because a transaction is already started." };
-
-        try
-        {
-            _transaction = await _context.Database.BeginTransactionAsync();
-            return new AuthResult { Success = true };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex.Message, "\nFailed to start new transaction for entity of type {EntityType}", typeof(UserEntity).Name);
-            return new AuthResult { Success = false, ErrorMessage = $"Something went wrong when starting transation." };
-        }
-    }
-
-    public async Task<AuthResult> CommitTransactionAsync()
-    {
-        if (_transaction == null)
-            return new AuthResult { Success = false, ErrorMessage = "Another transaction is already in use." };
-
-        try
-        {
-            await _transaction.CommitAsync();
-            await _transaction.DisposeAsync();
-            _transaction = null!;
-
-            return new AuthResult { Success = true };
-        }
-        catch (Exception ex)
-        {
-            await _transaction.RollbackAsync();
-            _logger.LogError(ex.Message, "Failed to commit transaction for entity of type {EntityType}", typeof(UserEntity).Name);
-            return new AuthResult { Success = false, ErrorMessage = $"Something went wrong when committing transation." };
-        }
-    }
-
-    public async Task<AuthResult> RollbackTransactionAsync()
-    {
-        if (_transaction == null)
-            return new AuthResult { Success = false, ErrorMessage = "There is no transaction to roll back." };
-
-        try
-        {
-            await _transaction.RollbackAsync();
-            await _transaction.DisposeAsync();
-            _transaction = null!;
-
-            return new AuthResult { Success = true };
-        }
-        catch (Exception ex)
-        {
-            _transaction = null!;
-            _logger.LogError(ex.Message, "Failed to roll back transaction for entity of type {EntityType}", typeof(UserEntity).Name);
-            return new AuthResult { Success = false, ErrorMessage = "Failed to rollback transaction." };
-        }
-    }
-
-    public async Task<AuthResult> SaveChangesAsync()
-    {
-        try
-        {
-            await _context.SaveChangesAsync();
-
-            return new AuthResult { Success = true };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex.Message, "Failed to save changes for entity of type {EntityType}", typeof(UserEntity).Name);
-            return new AuthResult { Success = false, ErrorMessage = "Failed to save changes." };
-        }
-    }
-
-    #endregion
 }

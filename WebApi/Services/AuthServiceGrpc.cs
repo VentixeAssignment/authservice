@@ -1,14 +1,16 @@
 ﻿using Grpc.Core;
+using WebApi.Data;
 using WebApi.Entities;
 using WebApi.Protos;
 using WebApi.Repositories;
 
 namespace WebApi.Services;
 
-public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger) : AuthHandler.AuthHandlerBase
+public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context) : AuthHandler.AuthHandlerBase
 {
     private readonly AuthRepository _authRepository = authRepository;
     private readonly ILogger<AuthService> _logger = logger;
+    private readonly DataContext _context = context;
 
 
     public override async Task<CreateReply> CreateUser(CreateRequest request, ServerCallContext context)
@@ -28,25 +30,26 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
             Email = request.Email
         };
 
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        
         try
         {
-            await _authRepository.BeginTransactionAsync();
             var result = await _authRepository.CreateUserAsync(newUser, request.Password);
 
             if (!result.Success)
             {
-                await _authRepository.RollbackTransactionAsync();
+                await transaction.RollbackAsync();
                 return new CreateReply { Success = false, StatusCode = 500, Message = $"Unable to create user with email {request.Email}\nError: {result.ErrorMessage}" };
             }
 
-            await _authRepository.SaveChangesAsync();
-            await _authRepository.CommitTransactionAsync();
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return new CreateReply { Success = true, StatusCode = 201, Message = "User was successfully created." };
         }
         catch (Exception ex)
         {
-            await _authRepository.RollbackTransactionAsync();
+            await transaction.RollbackAsync();
             _logger.LogWarning($"Something unexpected went wrong trying to create user with email {request.Email}.\n{ex}\n{ex.Message}");
             return new CreateReply { Success = false, StatusCode = 500, Message = $"Unable to create user with email {request.Email}\nError: {ex.Message}" };
         }
