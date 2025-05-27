@@ -41,7 +41,9 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return new CreateReply { Success = true, StatusCode = 201, Message = "User was successfully created." };
+            var newEntity = await _authRepository.GetUserAsync(null, request.Email);
+
+            return new CreateReply { Success = true, StatusCode = 201, Message = "User was successfully created.", UserId = newEntity.Data?.Id ?? "" };
         }
         catch (Exception ex)
         {
@@ -98,7 +100,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
            )
             return new PasswordReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
 
-        var userResult = await _authRepository.GetUserAsync(request.Id);
+        var userResult = await _authRepository.GetUserAsync(request.Id, null);
 
         if (!userResult.Success || userResult.Data == null)
             return new PasswordReply { Success = false, StatusCode = 400, Message = $"No user with id {request.Id} was found." };
@@ -140,7 +142,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         if (string.IsNullOrWhiteSpace(request.Id))
             return new DeleteReply { Success = false, StatusCode = 400, Message = "Id cannot be null." };
 
-        var userResult = await _authRepository.GetUserAsync(request.Id);
+        var userResult = await _authRepository.GetUserAsync(request.Id, null);
 
         if (!userResult.Success || userResult.Data == null)
             return new DeleteReply { Success = false, StatusCode = 400, Message = $"No user with id {request.Id} was found." };

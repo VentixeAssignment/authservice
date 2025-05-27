@@ -9,6 +9,7 @@ service AuthHandler {
 	rpc DeleteUser(DeleteRequest) returns(DeleteReply);
 }
 
+
 message CreateRequest {
 	string Email = 1;
 	string Password = 2;
@@ -18,6 +19,7 @@ message CreateReply {
 	bool Success = 1;
 	int32 StatusCode = 2;
 	string Message = 3;
+	string UserId = 4;
 }
 
 message UpdateRequest {

@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using System;
+using System.Linq.Expressions;
 using WebApi.Data;
 using WebApi.Entities;
 using WebApi.Models;
@@ -72,16 +74,26 @@ public class AuthRepository(DataContext context, SignInManager<UserEntity> signI
 
 
 
-    public async Task<AuthResult> GetUserAsync(string id)
+    public async Task<AuthResult> GetUserAsync(string? id, string? email)
     {
-        if (string.IsNullOrWhiteSpace(id))
-            return new AuthResult { Success = false, ErrorMessage = "Id cannot be null." };
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            var result = await _userManager.FindByIdAsync(id);
 
-        var result = await _userManager.FindByIdAsync(id);
+            return result != null
+                ? new AuthResult { Success = true, Data = result }
+                : new AuthResult { Success = false, ErrorMessage = $"No user with id {id} was found." };
+        }
+        else if (!string.IsNullOrWhiteSpace(email))
+        {
+            var result = await _userManager.FindByEmailAsync(email);
 
-        return result != null
-            ? new AuthResult { Success = true, Data = result }
-            : new AuthResult { Success = false, ErrorMessage = $"No user with id {id} was found." };
+            return result != null
+                ? new AuthResult { Success = true, Data = result }
+                : new AuthResult { Success = false, ErrorMessage = $"No user with email {email} was found." };
+        }
+        else
+            return new AuthResult { Success = false, ErrorMessage = "Id or email must contain a value." };
     }
 
 
