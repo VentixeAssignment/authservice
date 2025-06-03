@@ -25,7 +25,7 @@ public class AuthService(AuthRepository authRepository) : IAuthService
         }
         catch (Exception ex)
         {
-            return new AuthResult { Success = false, ErrorMessage = "An unexpected error occurred." };
+            return new AuthResult { Success = false, ErrorMessage = $"An unexpected error occurred.\n{ex.Message}" };
         }
     }
 

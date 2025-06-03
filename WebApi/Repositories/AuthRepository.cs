@@ -72,7 +72,17 @@ public class AuthRepository(DataContext context, SignInManager<UserEntity> signI
         }
     }
 
+    public async Task<AuthResult> AlreadyExistsAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return new AuthResult { Success = false, ErrorMessage = "Invalid or empty email address." };
 
+        var exists = await _userManager.FindByEmailAsync(email);
+
+        return exists != null
+            ? new AuthResult { Success = true, Message = "User already exists." }
+            : new AuthResult { Success = false, Message = "User does not exist." };
+    }
 
     public async Task<AuthResult> GetUserAsync(string? id, string? email)
     {

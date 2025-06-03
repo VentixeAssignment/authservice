@@ -4,8 +4,11 @@ option csharp_namespace = "WebApi.Protos";
 
 service AuthHandler {
 	rpc CreateUser(CreateRequest) returns(CreateReply);
+	rpc AlreadyExists(ExistsRequest) returns(ExistsReply);
+	rpc GetUserEmail(EmailRequest) returns(EmailReply);
 	rpc UpdateUser(UpdateRequest) returns(UpdateReply);
 	rpc UpdatePassword(PasswordRequest) returns(PasswordReply);
+	rpc ChangeActive(ActiveRequest) returns(ActiveReply);
 	rpc DeleteUser(DeleteRequest) returns(DeleteReply);
 }
 
@@ -20,6 +23,26 @@ message CreateReply {
 	int32 StatusCode = 2;
 	string Message = 3;
 	string UserId = 4;
+}
+
+message ExistsRequest {
+	string Email = 1;
+}
+
+message ExistsReply {
+	bool Success = 1;
+	int32 StatusCode = 2;
+	string Message = 3;
+}
+
+message EmailRequest {
+	string Id = 1;
+}
+
+message EmailReply {
+	bool Success = 1;
+	string Email = 2;
+	string Message = 3;
 }
 
 message UpdateRequest {
@@ -40,6 +63,17 @@ message PasswordRequest {
 }
 
 message PasswordReply {
+	bool Success = 1;
+	int32 StatusCode = 2;
+	string Message = 3;
+}
+
+message ActiveRequest {
+	bool IsActive = 1;
+	string Id = 2;
+}
+
+message ActiveReply {
 	bool Success = 1;
 	int32 StatusCode = 2;
 	string Message = 3;

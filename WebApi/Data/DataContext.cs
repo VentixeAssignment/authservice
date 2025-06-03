@@ -4,7 +4,7 @@ using WebApi.Entities;
 
 namespace WebApi.Data
 {
-    public class DataContext(DbContextOptions<DataContext> options) : IdentityDbContext(options)
+    public class DataContext(DbContextOptions<DataContext> options) : IdentityDbContext<UserEntity>(options)
     {
     }
 }

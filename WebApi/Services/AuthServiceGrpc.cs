@@ -53,12 +53,42 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         }
     }
 
+
+    public override async Task<ExistsReply> AlreadyExists(ExistsRequest request, ServerCallContext context)
+    {
+        if (request == null)
+            return new ExistsReply { Success = false, StatusCode = 400, Message = "Invalid request." };
+
+        var result = await _authRepository.AlreadyExistsAsync(request.Email);
+
+        return result.Success
+            ? new ExistsReply { Success = true, StatusCode = 409, Message = $"User with email {request.Email} already exists." }
+            : new ExistsReply { Success = false, StatusCode = 200, Message = $"User with email {request.Email} does not exist. " };
+    }
+
+
+    public override async Task<EmailReply> GetUserEmail(EmailRequest request, ServerCallContext context)
+    {
+        if (request == null)
+            return new EmailReply { Success = false, Message = "Email can not be empty." };
+
+        var entity = await _authRepository.GetUserAsync(request.Id, null);
+
+        if (entity == null)
+            return new EmailReply { Success = false, Message = $"No user found with id: {request.Id}" };
+
+        return new EmailReply { Success = true, Email = entity.Data!.Email };
+    }
+
+
     public override async Task<UpdateReply> UpdateUser(UpdateRequest request, ServerCallContext context)
     {
         if (string.IsNullOrWhiteSpace(request.Id) ||
            string.IsNullOrWhiteSpace(request.Email)
            )
             return new UpdateReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
+
+        //var exists = 
 
         var newUser = new UserEntity
         {
@@ -91,6 +121,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
             return new UpdateReply { Success = false, StatusCode = 500, Message = $"Unable to update user.\nError: {ex.Message}" };
         }
     }
+
 
     public override async Task<PasswordReply> UpdatePassword(PasswordRequest request, ServerCallContext context)
     {
@@ -137,6 +168,41 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         }
     }
 
+
+    public override async Task<ActiveReply> ChangeActive(ActiveRequest request, ServerCallContext context)
+    {
+        if (request == null)
+            return new ActiveReply { Success = false, StatusCode = 400, Message = "Invalid request." };
+
+        var userResult = await _authRepository.GetUserAsync(request.Id, null);
+
+        if (!userResult.Success || userResult.Data == null)
+            return new ActiveReply { Success = false, StatusCode = 404, Message = $"No user with id {request.Id} was found." };
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var result = await _authRepository.UpdateUserAsync(userResult.Data);
+            if (!result.Success)
+            {
+                await transaction.RollbackAsync();
+                return new ActiveReply { Success = false, StatusCode = 500, Message = $"Unable to update user status.\nError: {result.ErrorMessage}" };
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return new ActiveReply { Success = true, StatusCode = 200, Message = "User status was successfully updated." };
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogWarning($"Something unexpected happened trying to update user status.\n{ex}\n{ex.Message}");
+            return new ActiveReply { Success = false, StatusCode = 500, Message = $"Unable to update user status.\nError: {ex.Message}" };
+        }
+    }
+
+
     public override async Task<DeleteReply> DeleteUser(DeleteRequest request, ServerCallContext context)
     {
         if (string.IsNullOrWhiteSpace(request.Id))
@@ -145,20 +211,13 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         var userResult = await _authRepository.GetUserAsync(request.Id, null);
 
         if (!userResult.Success || userResult.Data == null)
-            return new DeleteReply { Success = false, StatusCode = 400, Message = $"No user with id {request.Id} was found." };
-
-        var user = new UserEntity
-        {
-            Id = request.Id,
-            UserName = userResult.Data.Email,
-            Email = userResult.Data.Email
-        };
+            return new DeleteReply { Success = false, StatusCode = 404, Message = $"No user with id {request.Id} was found." };
 
         using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            var result = await _authRepository.DeleteUserAsync(user);
+            var result = await _authRepository.DeleteUserAsync(userResult.Data);
 
             if (!result.Success)
                 return new DeleteReply { Success = false, StatusCode = 500, Message = result.ErrorMessage };
