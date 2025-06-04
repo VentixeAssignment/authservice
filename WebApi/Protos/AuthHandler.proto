@@ -10,6 +10,7 @@ service AuthHandler {
 	rpc UpdatePassword(PasswordRequest) returns(PasswordReply);
 	rpc ChangeActive(ActiveRequest) returns(ActiveReply);
 	rpc DeleteUser(DeleteRequest) returns(DeleteReply);
+	rpc SignIn(SigninRequest) returns(SigninReply);
 }
 
 
@@ -89,5 +90,14 @@ message DeleteReply {
 	string Message = 3;
 }
 
+message SigninRequest {
+	string Email = 1;
+	string Password = 2;
+}
 
+message SigninReply {
+	string Token = 1;
+	string Message = 2;
+	bool Succeeded = 3;
+}
 

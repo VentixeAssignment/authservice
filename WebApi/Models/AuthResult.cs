@@ -8,4 +8,5 @@ public class AuthResult
     public UserEntity? Data { get; set; }
     public string? ErrorMessage { get; set; }
     public string? Message { get; set; }
+    public string? Token { get; set; }
 }
