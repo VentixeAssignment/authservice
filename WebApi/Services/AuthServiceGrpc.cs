@@ -1,23 +1,47 @@
 ﻿using Grpc.Core;
 using WebApi.Data;
 using WebApi.Entities;
+using WebApi.Helpers;
 using WebApi.Protos;
 using WebApi.Repositories;
 
 namespace WebApi.Services;
 
-public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context) : AuthHandler.AuthHandlerBase
+public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService> logger, DataContext context, IAuthService authService) : AuthHandler.AuthHandlerBase
 {
     private readonly AuthRepository _authRepository = authRepository;
+    private readonly IAuthService _authService = authService;
     private readonly ILogger<AuthService> _logger = logger;
     private readonly DataContext _context = context;
 
 
+
+    public override async Task<SigninReply> SignIn(SigninRequest request, ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            return new SigninReply { Token = "", Message = "SigninRequest is invalid.", Succeeded = false };
+        try
+        {
+            var result = await _authService.SignInAsync(request.Email, request.Password);
+            
+            return result.Success
+                ? new SigninReply { Token = result.Token, Message = "Signin successfull.", Succeeded = true }
+                : new SigninReply { Message = $"Unable to sign in. {result.ErrorMessage}", Succeeded = false };
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning($"Something went wrong when signing in. ##### {ex.Message}");
+            return new SigninReply { Token = "", Message = $"Something unexpected happened when signing in. {ex}", Succeeded = false };
+        }
+    }
+
+
     public override async Task<CreateReply> CreateUser(CreateRequest request, ServerCallContext context)
     {
-            if(string.IsNullOrWhiteSpace(request.Email) ||
-            string.IsNullOrWhiteSpace(request.Password)
-            )
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.Password)
+        )
             return new CreateReply { Success = false, StatusCode = 400, Message = "Not all fields are valid." };
 
         var newUser = new UserEntity
@@ -27,7 +51,7 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
         };
 
         using var transaction = await _context.Database.BeginTransactionAsync();
-        
+
         try
         {
             var result = await _authRepository.CreateUserAsync(newUser, request.Password);

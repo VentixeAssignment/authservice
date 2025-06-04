@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebApi.Data;
 using WebApi.Entities;
+using WebApi.Helpers;
 using WebApi.Repositories;
 using WebApi.Services;
 
@@ -22,6 +23,7 @@ builder.Services.AddIdentity<UserEntity, IdentityRole>()
     .AddEntityFrameworkStores<DataContext>();
 
 builder.Services.AddScoped<AuthRepository>();
+builder.Services.AddScoped<TokenProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
