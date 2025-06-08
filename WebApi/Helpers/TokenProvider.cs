@@ -1,4 +1,5 @@
 ﻿using Azure.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -17,21 +18,29 @@ public sealed class TokenProvider(IConfiguration config)
     {
         var key = _config["Jwt:Key"];
         var encodedKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
-
         var credentials = new SigningCredentials(encodedKey, SecurityAlgorithms.HmacSha256);
+
+        var audiences = _config.GetSection("Jwt:Audience").Get<string[]>();
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email!)
+        };
+
+        foreach (var aud in audiences)
+        {
+            claims.Add(new Claim(JwtRegisteredClaimNames.Aud, aud));
+        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email!)
-            ]),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(60),
             SigningCredentials = credentials,
-            Issuer = _config["Jwt:Issuer"],
-            Audience = _config["Jwt:Audience"]
+            Issuer = _config["Jwt:Issuer"]
         };
+
 
         var handler = new JsonWebTokenHandler();
         var token = handler.CreateToken(tokenDescriptor);
