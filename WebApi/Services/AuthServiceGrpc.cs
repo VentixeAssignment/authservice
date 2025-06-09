@@ -105,6 +105,26 @@ public class AuthServiceGrpc(AuthRepository authRepository, ILogger<AuthService>
     }
 
 
+    public override async Task<VerifyCodeReply> VerifyCode(VerifyCodeRequest request, ServerCallContext context)
+    {
+        if(request == null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code) || !request.Email.Contains('@'))
+            return new VerifyCodeReply { Succeeded = false, StatusCode = 400, Message = "Invalid request. Data is missing or invalid." };
+
+        var user = await _authRepository.GetUserAsync(null, request.Email);
+
+        if(user == null || user.Data == null)
+            return new VerifyCodeReply { Succeeded = false, StatusCode = 404, Message = $"User with email {request.Email} was not found." };
+
+        user.Data.EmailConfirmed = true;
+        var updateResult = await _authRepository.UpdateUserAsync(user.Data);
+
+        if(!updateResult.Success) 
+            return new VerifyCodeReply { Succeeded = false, StatusCode = 500, Message = updateResult.Message };
+
+        return new VerifyCodeReply { Succeeded = true, StatusCode = 200 };
+    }
+
+
     public override async Task<UpdateReply> UpdateUser(UpdateRequest request, ServerCallContext context)
     {
         if (string.IsNullOrWhiteSpace(request.Id) ||

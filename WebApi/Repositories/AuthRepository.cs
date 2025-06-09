@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Linq.Expressions;
 using WebApi.Data;
 using WebApi.Entities;
 using WebApi.Models;
+using WebApi.Protos;
 
 namespace WebApi.Repositories;
 
@@ -49,7 +51,6 @@ public class AuthRepository(DataContext context, SignInManager<UserEntity> signI
             return new AuthResult { Success = false, ErrorMessage = $"Something went wrong signing out user.\n{ex}\n{ex.Message}" };
         }
     }
-
 
 
     public async Task<AuthResult> CreateUserAsync(UserEntity user, string password)
