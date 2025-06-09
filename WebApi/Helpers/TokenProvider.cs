@@ -20,25 +20,19 @@ public sealed class TokenProvider(IConfiguration config)
         var encodedKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
         var credentials = new SigningCredentials(encodedKey, SecurityAlgorithms.HmacSha256);
 
-        var audiences = _config.GetSection("Jwt:Audience").Get<string[]>();
-
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email!)
         };
 
-        foreach (var aud in audiences)
-        {
-            claims.Add(new Claim(JwtRegisteredClaimNames.Aud, aud));
-        }
-
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(60),
             SigningCredentials = credentials,
-            Issuer = _config["Jwt:Issuer"]
+            Issuer = _config["Jwt:Issuer"],
+            Audience = _config["Jwt:Audience"]
         };
 
 
